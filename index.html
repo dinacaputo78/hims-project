@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIMS - Harmonized Injury Monitoring System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .federation-selector {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-secondary {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .alert {
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HIMS - Harmonized Injury Monitoring System</h1>
+            <select class="federation-selector" id="federationSelector">
+                <option value="admin">Admin (All Data)</option>
+                <option value="italy">Italy Federation</option>
+                <option value="portugal">Portugal Federation</option>
+                <option value="france">France Federation</option>
+            </select>
+        </div>
+
+        <div class="content">
+            <div id="alertContainer"></div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="dashboard">Dashboard</button>
+                <button class="tab" data-tab="injuries">Record Injury</button>
+                <button class="tab" data-tab="exposures">Record Exposures</button>
+                <button class="tab" data-tab="data">View Data</button>
+                <button class="tab" data-tab="dictionary">Data Dictionary</button>
+            </div>
+
+            <!-- Dashboard -->
+            <div id="dashboardTab">
+                <div class="stats-grid" id="statsGrid"></div>
+                <div id="exportSection">
+                    <button class="btn-secondary" id="exportBtn">Export CSV</button>
+                </div>
+            </div>
+
+            <!-- Record Injury -->
+            <div id="injuriesTab" class="hidden">
+                <h2>Record New Injury</h2>
+                <form id="injuryForm">
+                    <div class="form-group">
+                        <label>Context *</label>
+                        <select id="context" required>
+                            <option value="">Select...</option>
+                            <option value="training">Training</option>
+                            <option value="competition">Competition</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Athlete Name *</label>
+                        <input type="text" id="athleteName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Injury Date *</label>
+                        <input type="date" id="injuryDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Anatomical Site *</label>
+                        <select id="anatomicalSite" required>
+                            <option value="">Select...</option>
+                            <option value="head">Head/Face</option>
+                            <option value="neck">Neck</option>
+                            <option value="shoulder">Shoulder</option>
+                            <option value="arm">Arm</option>
+                            <option value="elbow">Elbow</option>
+                            <option value="wrist">Wrist</option>
+                            <option value="hand">Hand</option>
+                            <option value="chest">Chest</option>
+                            <option value="back">Back</option>
+                            <option value="hip">Hip</option>
+                            <option value="knee">Knee</option>
+                            <option value="ankle">Ankle</option>
+                            <option value="foot">Foot</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Injury Type *</label>
+                        <select id="injuryType" required>
+                            <option value="">Select...</option>
+                            <option value="contusion">Contusion</option>
+                            <option value="laceration">Laceration</option>
+                            <option value="fracture">Fracture</option>
+                            <option value="sprain">Sprain</option>
+                            <option value="strain">Strain</option>
+                            <option value="dislocation">Dislocation</option>
+                            <option value="concussion">Concussion</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Mechanism *</label>
+                        <select id="mechanism" required>
+                            <option value="">Select...</option>
+                            <option value="direct_contact">Direct Contact</option>
+                            <option value="overuse">Overuse</option>
+                            <option value="non_contact">Non-Contact</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Recurrence *</label>
+                        <select id="recurrence" required>
+                            <option value="">Select...</option>
+                            <option value="new">New Injury</option>
+                            <option value="recurrent">Recurrent Injury</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Time-Loss (days) *</label>
+                        <input type="number" id="timeLoss" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Session Duration (minutes)</label>
+                        <input type="number" id="sessionDuration" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="notes" rows="3"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Record Injury</button>
+                </form>
+            </div>
+
+            <!-- Record Exposures -->
+            <div id="exposuresTab" class="hidden">
+                <h2>Record Athlete Exposures</h2>
+                
+                <div class="tabs" style="margin-top: 20px;">
+                    <button class="tab active" data-mode="aggregate">Aggregate Mode</button>
+                    <button class="tab" data-mode="individual">Individual Mode</button>
+                </div>
+                
+                <form id="aggregateForm" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="expDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Context *</label>
+                        <select id="expContext" required>
+                            <option value="">Select...</option>
+                            <option value="training">Training</option>
+                            <option value="competition">Competition</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Number of Athletes *</label>
+                        <input type="number" id="numAthletes" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Session Duration (minutes)</label>
+                        <input type="number" id="expDuration" min="0">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Record Exposures</button>
+                </form>
+                
+                <form id="individualForm" class="hidden" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="indDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Context *</label>
+                        <select id="indContext" required>
+                            <option value="">Select...</option>
+                            <option value="training">Training</option>
+                            <option value="competition">Competition</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Athlete Name *</label>
+                        <input type="text" id="indAthleteName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Session Duration (minutes)</label>
+                        <input type="number" id="indDuration" min="0">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Record Exposure</button>
+                </form>
+            </div>
+
+            <!-- View Data -->
+            <div id="dataTab" class="hidden">
+                <h2>Injuries & Exposures Data</h2>
+                <div id="dataContent"></div>
+            </div>
+
+            <!-- Data Dictionary -->
+            <div id="dictionaryTab" class="hidden">
+                <h2>Data Dictionary</h2>
+                <div style="line-height: 1.8;">
+                    <h3>Core Definitions (NCAA-inspired)</h3>
+                    <p><strong>Athlete Exposure (AE):</strong> One athlete participating in one training or competition session where exposed to risk, regardless of duration.</p>
+                    <p><strong>Time-Loss:</strong> Time between injury and return to participation, classified by severity in days.</p>
+                    
+                    <h3 style="margin-top: 30px;">Mandatory Minimum Dataset</h3>
+                    <ul style="margin-left: 20px;">
+                        <li>Event type (training/competition)</li>
+                        <li>Number of athletes exposed</li>
+                        <li>Anatomical site</li>
+                        <li>Injury type</li>
+                        <li>Mechanism</li>
+                        <li>Recurrence status</li>
+                        <li>Time-loss (days)</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 30px;">Time-Loss Severity Classification</h3>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>Minimal:</strong> 1-3 days</li>
+                        <li><strong>Mild:</strong> 4-7 days</li>
+                        <li><strong>Moderate:</strong> 8-28 days</li>
+                        <li><strong>Severe:</strong> >28 days</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFederation = 'admin';
+        let injuries = JSON.parse(localStorage.getItem('himsInjuries') || '[]');
+        let exposures = JSON.parse(localStorage.getItem('himsExposures') || '[]');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateDashboard();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('federationSelector').addEventListener('change', function(e) {
+                currentFederation = e.target.value;
+                updateDashboard();
+            });
+
+            document.querySelectorAll('.tabs:first-of-type .tab').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    switchTab(e.target.getAttribute('data-tab'));
+                });
+            });
+
+            document.querySelectorAll('[data-mode]').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    switchExposureMode(e.target.getAttribute('data-mode'));
+                });
+            });
+
+            document.getElementById('injuryForm').addEventListener('submit', handleInjurySubmit);
+            document.getElementById('aggregateForm').addEventListener('submit', handleAggregateSubmit);
+            document.getElementById('individualForm').addEventListener('submit', handleIndividualSubmit);
+            document.getElementById('exportBtn').addEventListener('click', exportData);
+        }
+
+        function switchTab(tabName) {
+            document.getElementById('dashboardTab').classList.add('hidden');
+            document.getElementById('injuriesTab').classList.add('hidden');
+            document.getElementById('exposuresTab').classList.add('hidden');
+            document.getElementById('dataTab').classList.add('hidden');
+            document.getElementById('dictionaryTab').classList.add('hidden');
+
+            document.querySelectorAll('.tabs:first-of-type .tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            if (tabName === 'data') displayData();
+        }
+
+        function switchExposureMode(mode) {
+            document.querySelectorAll('[data-mode]').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+
+            if (mode === 'aggregate') {
+                document.getElementById('aggregateForm').classList.remove('hidden');
+                document.getElementById('individualForm').classList.add('hidden');
+            } else {
+                document.getElementById('aggregateForm').classList.add('hidden');
+                document.getElementById('individualForm').classList.remove('hidden');
+            }
+        }
+
+        function handleInjurySubmit(e) {
+            e.preventDefault();
+            const injury = {
+                id: Date.now(),
+                federation: currentFederation === 'admin' ? 'admin' : currentFederation,
+                context: document.getElementById('context').value,
+                athleteName: document.getElementById('athleteName').value,
+                injuryDate: document.getElementById('injuryDate').value,
+                anatomicalSite: document.getElementById('anatomicalSite').value,
+                injuryType: document.getElementById('injuryType').value,
+                mechanism: document.getElementById('mechanism').value,
+                recurrence: document.getElementById('recurrence').value,
+                timeLoss: parseInt(document.getElementById('timeLoss').value),
+                sessionDuration: document.getElementById('sessionDuration').value || null,
+                notes: document.getElementById('notes').value,
+                timestamp: new Date().toISOString()
+            };
+
+            injuries.push(injury);
+            localStorage.setItem('himsInjuries', JSON.stringify(injuries));
+            showAlert('Injury recorded successfully!', 'success');
+            document.getElementById('injuryForm').reset();
+            updateDashboard();
+        }
+
+        function handleAggregateSubmit(e) {
+            e.preventDefault();
+            const exposure = {
+                id: Date.now(),
+                federation: currentFederation === 'admin' ? 'admin' : currentFederation,
+                mode: 'aggregate',
+                date: document.getElementById('expDate').value,
+                context: document.getElementById('expContext').value,
+                numAthletes: parseInt(document.getElementById('numAthletes').value),
+                duration: document.getElementById('expDuration').value || null,
+                timestamp: new Date().toISOString()
+            };
+
+            exposures.push(exposure);
+            localStorage.setItem('himsExposures', JSON.stringify(exposures));
+            showAlert('Exposures recorded successfully!', 'success');
+            document.getElementById('aggregateForm').reset();
+            updateDashboard();
+        }
+
+        function handleIndividualSubmit(e) {
+            e.preventDefault();
+            const exposure = {
+                id: Date.now(),
+                federation: currentFederation === 'admin' ? 'admin' : currentFederation,
+                mode: 'individual',
+                date: document.getElementById('indDate').value,
+                context: document.getElementById('indContext').value,
+                athleteName: document.getElementById('indAthleteName').value,
+                duration: document.getElementById('indDuration').value || null,
+                timestamp: new Date().toISOString()
+            };
+
+            exposures.push(exposure);
+            localStorage.setItem('himsExposures', JSON.stringify(exposures));
+            showAlert('Exposure recorded successfully!', 'success');
+            document.getElementById('individualForm').reset();
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            let filteredInjuries = currentFederation === 'admin' 
+                ? injuries 
+                : injuries.filter(i => i.federation === currentFederation);
+            let filteredExposures = currentFederation === 'admin' 
+                ? exposures 
+                : exposures.filter(e => e.federation === currentFederation);
+
+            const totalInjuries = filteredInjuries.length;
+            const totalExposures = filteredExposures.reduce((sum, exp) => 
+                sum + (exp.mode === 'aggregate' ? exp.numAthletes : 1), 0
+            );
+            const avgTimeLoss = filteredInjuries.length > 0 
+                ? (filteredInjuries.reduce((sum, inj) => sum + inj.timeLoss, 0) / filteredInjuries.length).toFixed(1)
+                : 0;
+            const injuryRate = totalExposures > 0 
+                ? ((totalInjuries / totalExposures) * 1000).toFixed(2)
+                : 0;
+
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Injuries</h3>
+                    <div class="value">${totalInjuries}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Exposures</h3>
+                    <div class="value">${totalExposures}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg Time-Loss (days)</h3>
+                    <div class="value">${avgTimeLoss}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Injury Rate (per 1000 AE)</h3>
+                    <div class="value">${injuryRate}</div>
+                </div>
+            `;
+        }
+
+        function displayData() {
+            let filteredInjuries = currentFederation === 'admin' 
+                ? injuries 
+                : injuries.filter(i => i.federation === currentFederation);
+            let filteredExposures = currentFederation === 'admin' 
+                ? exposures 
+                : exposures.filter(e => e.federation === currentFederation);
+
+            document.getElementById('dataContent').innerHTML = `
+                <h3>Injuries (${filteredInjuries.length})</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Athlete</th>
+                            <th>Context</th>
+                            <th>Site</th>
+                            <th>Type</th>
+                            <th>Time-Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredInjuries.length > 0 ? filteredInjuries.map(inj => `
+                            <tr>
+                                <td>${inj.injuryDate}</td>
+                                <td>${inj.athleteName}</td>
+                                <td>${inj.context}</td>
+                                <td>${inj.anatomicalSite}</td>
+                                <td>${inj.injuryType}</td>
+                                <td>${inj.timeLoss} days</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="6" style="text-align:center;">No data</td></tr>'}
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 30px;">Exposures (${filteredExposures.length})</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Context</th>
+                            <th>Mode</th>
+                            <th>Athletes/Name</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredExposures.length > 0 ? filteredExposures.map(exp => `
+                            <tr>
+                                <td>${exp.date}</td>
+                                <td>${exp.context}</td>
+                                <td>${exp.mode}</td>
+                                <td>${exp.mode === 'aggregate' ? exp.numAthletes : exp.athleteName}</td>
+                                <td>${exp.duration || '-'} min</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="5" style="text-align:center;">No data</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function exportData() {
+            let dataToExport = currentFederation === 'admin' 
+                ? injuries 
+                : injuries.filter(i => i.federation === currentFederation);
+
+            const csv = [
+                ['Date', 'Federation', 'Athlete', 'Context', 'Site', 'Type', 'Mechanism', 'Recurrence', 'Time-Loss', 'Duration', 'Notes'],
+                ...dataToExport.map(inj => [
+                    inj.injuryDate,
+                    inj.federation,
+                    inj.athleteName,
+                    inj.context,
+                    inj.anatomicalSite,
+                    inj.injuryType,
+                    inj.mechanism,
+                    inj.recurrence,
+                    inj.timeLoss,
+                    inj.sessionDuration || '',
+                    inj.notes || ''
+                ])
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hims_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            document.getElementById('alertContainer').appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
